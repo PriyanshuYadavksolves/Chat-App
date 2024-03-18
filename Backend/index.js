@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require('cors')
+const {connectDB} = require('./db/connectDB')
 
 const app = express();
 
@@ -8,15 +9,6 @@ app.use(cors({
     origin:"*",
 }))
 
-const mongoose = require("mongoose");
-//set up mongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-.then(() => {
-    console.log("Successfully connected to mongo.");
-})
-.catch((err) => {
-    console.log("Error connecting to mongo.", err);
-});
 app.use(express.json()); // parse body
 // routes
 app.use('/api', require('./route/auth.js'));
@@ -24,8 +16,19 @@ app.use('/api', require('./route/auth.js'));
 app.use('/',(req,res)=>{
     res.json()
 })
+const PORT = 3000
 
-const PORT = 3000;
-app.listen(PORT, () => {
-     console.log("Listening on port: " + PORT);
-}); 
+//set up mongoDB connection
+const main = async() => {
+    try {
+        await connectDB(process.env.MONGO_URI)
+        app.listen(PORT, () => {
+            console.log("mongoDB connected")
+          console.log("listen on 3000.");
+        });
+    } catch (error) {
+      console.log(error)
+    }
+  }
+  
+  main()

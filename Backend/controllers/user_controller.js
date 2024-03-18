@@ -44,7 +44,7 @@ exports.signup = async (req, res) => {
 
     // Step 2 - Generate a verification token with the user's ID
     const verificationToken = user.generateVerificationToken();
-    console.log(verificationToken)
+    // console.log(verificationToken)
 
     // Step 3 - Email the user a unique verification link
     const url = `http://localhost:5173/verify/${verificationToken}`;
@@ -171,12 +171,17 @@ exports.forgotPassword = async (req, res) => {
 
   // Generate the reset token
   const resetToken = user.createPasswordResetToken();
+  // console.log("hello")
+  const OTP = user.generateOTP()
+  // console.log(OTP)
   await user.save();
 
   const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
   try {
-    const message = `Forgot your password? Click link: <a href = '${resetUrl}'>Here</a>\n If you did not request this, please ignore this email and your password will remain unchanged.`;
+    const message = `Forgot your password?\n Please enter OTP to reset password :
+    <h1 style="font-size: 40px; letter-spacing: 2px; text-align:center;">${OTP}</h1>
+    \n  Click link: <a href = '${resetUrl}'>${resetUrl}</a> to got Reset Password page.\nIf you did not request this, please ignore this email and your password will remain unchanged.`;
 
     transporter.sendMail(
       {
@@ -210,17 +215,18 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const {otp} = req.body.data
 
     // Finds user based on the token
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
+      otp:otp,
+      otpExpires : {$gt:Date.now()}
     });
-
     // console.log("hello"+user)
-
     if (!user) {
-      return res.status(410).json({message : "Token is invalid or has expired"});
+      return res.status(410).json({message : "Token/OTP is invalid or has expired"});
     }
 
     // Check if Last password is same as Current One
@@ -238,6 +244,8 @@ exports.resetPassword = async (req, res) => {
     //Remove passwordResetToken 
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    user.otp = undefined
+    user.otpExpires = undefined
     await user.save();
     res.status(205).json({
       status: "success",user

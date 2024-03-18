@@ -30,6 +30,7 @@ const ResetPassword = () => {
               toast.success("Password Reset Successfully")
               reset()
               navigate('/login')
+            
             } catch (error) {
               console.log(error)
               setFalt(error.response.data.message)
@@ -45,9 +46,25 @@ const ResetPassword = () => {
             className="flex flex-col gap-y-2"
             onSubmit={handleSubmit(onSubmit)}
           >
+            <label htmlFor="Otp">OTP</label>
+            <input
+              className="border-2 rounded-md p-1 text-sm text-blue-900 placeholder:text-xs "
+              type="text"
+              name="Otp"
+              id="Otp"
+              placeholder="Enter OTP "
+              {...register("otp", {
+                required:"OTP is required",
+                minLength: {
+                  value: 6,
+                  message: "OTP should be of 6 characters",
+                },
+              })}
+            />
+            {errors.otp && <p className="text-red-500 text-xs text-center">{errors.otp.message}</p>}
             
             <label htmlFor="Password" className="text-sm">
-              Password
+              New Password
             </label>
               
             <input
@@ -55,7 +72,7 @@ const ResetPassword = () => {
               type="password"
               name="Password"
               id="Password"
-              placeholder="Enter your new passwoord"
+              placeholder="Enter your new password"
               {...register("password", {
                 required:"Password is required",
                 minLength: {
