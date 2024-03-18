@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link,useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from 'axios'
 import {jwtDecode} from 'jwt-decode';
@@ -7,6 +7,11 @@ import {jwtDecode} from 'jwt-decode';
 import { toast } from "react-toastify";
 
 const ResetPassword = () => {
+  const params = useLocation()
+  const token = params.pathname.split('/')[2]
+  console.log(token)
+  const navigate = useNavigate()
+
         const {
           register,
           handleSubmit,
@@ -16,16 +21,14 @@ const ResetPassword = () => {
         const onSubmit = async(data) => {
             try {
               // console.log(data);
-              const res = await axios.post('http://localhost:3000/api/login',{
+              const res = await axios.patch('http://localhost:3000/api/reset-password/'+token,{
                 data
               })
-              console.log(res.data.verificationToken)
-              const token = res.data.verificationToken
-              const decodedToken = jwtDecode(token);
-              console.log(decodedToken)
-        
+              console.log(res.data)
+
             //   toast.success("Email Sent Successfully")
               reset()
+              navigate('/login')
             } catch (error) {
               console.log(error)
             }

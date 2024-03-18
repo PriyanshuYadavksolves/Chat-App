@@ -19,7 +19,6 @@ function App() {
       <Route path='/login'  element={<Login/>} />
       <Route path='/forgotPassword'  element={<ForgotPassword/>} />
       <Route path='/reset-password/:id'  element={<ResetPassword/>} />
-      <Route path='/reset-password/:id'  element={<ResetPassword/>} />
 
 
       {/* magic found from medium */}
