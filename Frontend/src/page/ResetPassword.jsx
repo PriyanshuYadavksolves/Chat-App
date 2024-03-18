@@ -32,7 +32,7 @@ const ResetPassword = () => {
               navigate('/login')
             } catch (error) {
               console.log(error)
-              setFalt(error.response.data)
+              setFalt(error.response.data.message)
             }
           };
   return (
@@ -55,7 +55,7 @@ const ResetPassword = () => {
               type="password"
               name="Password"
               id="Password"
-              placeholder="Enter your passwoord"
+              placeholder="Enter your new passwoord"
               {...register("password", {
                 required:"Password is required",
                 minLength: {

@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from 'axios'
 import { toast } from "react-toastify";
 
 const Register = () => {
+  const [msg,setMsg] = useState('')
   const {
     register,
     handleSubmit,
@@ -19,11 +20,14 @@ const Register = () => {
       const res = await axios.post('http://localhost:3000/api/signup',{
         data
       })
+      setMsg(res.data.message)
       console.log(res.data)
       toast.success("Email Sent Successfully")
+      
       reset()
     } catch (error) {
-      console.log(error)
+      // console.log(error)
+      toast.warning(error.response.data.message)
     }
   };
   return (
@@ -85,6 +89,7 @@ const Register = () => {
               })}
             />
             {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
+            {msg && <p className="text-green-500 text-md">{msg}</p>}
 
 
             <input

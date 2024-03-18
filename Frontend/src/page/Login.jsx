@@ -27,10 +27,11 @@ const Login = () => {
       const decodedToken = jwtDecode(token);
       console.log(decodedToken)
 
-    //   toast.success("Email Sent Successfully")
+      toast.success("Login Successfully")
       reset()
     } catch (error) {
       console.log(error)
+      toast.error(error.response.data.message)
     }
   };
   return (

@@ -6,7 +6,9 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt')
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host:process.env.SMTP_HOST,
+  port:process.env.SMTP_PORT,
+  secure:true,
   auth: {
     user: process.env.EMAIL_USERNAME,
     pass: process.env.EMAIL_PASSWORD,
@@ -15,10 +17,9 @@ const transporter = nodemailer.createTransport({
 
 exports.signup = async (req, res) => {
   const { email,password,username } = req.body.data;
-  console.log(email,password,username)
   // Check we have an email
-  if (!email) {
-    return res.status(422).json({ message: "Missing email." });
+  if (!email || !password || !username) {
+    return res.status(422).json({ message: "Missing input field's value." });
   }
   try {
     // Check if the email is in use
@@ -28,15 +29,11 @@ exports.signup = async (req, res) => {
         message: "Email is already in use.",
       });
     }
-    console.log("hello")
 
     // Step 1 - Create and save the user
 
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(password, salt);
-
-    // const che = await bcrypt.compare(password,hashedPass)
-    // console.log(che,"hello")
 
     const user = await new User({
       _id: new mongoose.Types.ObjectId(),
@@ -45,23 +42,23 @@ exports.signup = async (req, res) => {
       password:hashedPass
     }).save();
 
-    console.log(user)
-
     // Step 2 - Generate a verification token with the user's ID
     const verificationToken = user.generateVerificationToken();
+    console.log(verificationToken)
 
     // Step 3 - Email the user a unique verification link
     const url = `http://localhost:5173/verify/${verificationToken}`;
     transporter.sendMail(
       {
-        from: "priyanshu.yadav@ksolves.com",
+        from: "KsolvesTagManager@gmail.com",
         to: email,
-        subject: "Verify Account",
-        html: `Click <a href = '${url}'>here</a> to confirm your email.`,
+        subject: "KTM Verify Account",
+        html: `Click <a href = '${url}'>${url}</a> to confirm your email.`,
       },
       (err, res) => {
         if (err) {
           console.log(err);
+          // return res.json({message:"Service unavailable"})
         } else {
           console.log("msg sent");
         }
@@ -71,8 +68,8 @@ exports.signup = async (req, res) => {
       message: `Sent a verification email to ${email}`,
     });
   } catch (err) {
-    console.log(err)
-    return res.status(500).json(err);
+    // console.log(err)
+    return res.status(503).json({message : "Service unavailable"});
   }
 };
 
@@ -90,10 +87,9 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
-        message: "User does not exists",
+        message: "Email does not exists",
       });
     }
-    // console.log(password,user.password)
 
     // step 2 - Ensure Password is correct or not
     const validate = await bcrypt.compare(password,user.password)
@@ -105,7 +101,7 @@ exports.login = async (req, res) => {
     // Step 3 - Ensure the account has been verified
     if (!user.verified) {
       return res.status(403).json({
-        message: "Verify your Account.",
+        message: "First Verify your Account.",
       });
     }
 
@@ -115,35 +111,30 @@ exports.login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // const payload = jwt.verify(verificationToken, process.env.USER_VERIFICATION_TOKEN_SECRET);
-    // console.log(payload)
 
     return res.status(200).json({
       message: "User logged in",
       verificationToken,
     });
   } catch (err) {
-    return res.status(500).json(err);
+    return res.status(503).json({message:"Service unavailable"});
   }
 };
 
 exports.verify = async (req, res) => {
   const { token } = req.params;
-  // console.log(req.params)
+
   // Check we have an id
   if (!token) {
-    return res.status(422).json({
-      message: "Missing Token",
-    });
+    return res.status(422).json({message: "Missing Token",});
   }
+
   // Step 1 -  Verify the token from the URL
   let payload = null;
   try {
     payload = jwt.verify(token, process.env.USER_VERIFICATION_TOKEN_SECRET);
-    // console.log(payload)
   } catch (err) {
-    console.log("hello");
-    return res.status(500).json({message:"Token Not Valid"});
+    return res.status(401).json({message:"Token Not Valid"});
   }
   try {
     // Step 2 - Find user with matching ID
@@ -154,7 +145,7 @@ exports.verify = async (req, res) => {
       });
     }
     if (user.verified) {
-      return res.status(200).json({
+      return res.status(409).json({
         message: "Account Already Varified",
       });
     }
@@ -165,7 +156,7 @@ exports.verify = async (req, res) => {
       message: "Account Verified",
     });
   } catch (err) {
-    return res.status(500).json(err);
+    return res.status(503).json({message : "Service Unavailable"});
   }
 };
 
@@ -175,14 +166,13 @@ exports.forgotPassword = async (req, res) => {
     email: req.body.data.email });
 
   if (!user) {
-    return res.status(400).json({message : "This Email Not Exist, Enter Correct Email"});
+    return res.status(401).json({message : "This Email Not Exist, Enter Correct Email"});
   }
-//   console.log("hello" + user);
 
   // Generate the reset token
   const resetToken = user.createPasswordResetToken();
   await user.save();
-//   console.log(user);
+
   const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
   try {
@@ -190,9 +180,9 @@ exports.forgotPassword = async (req, res) => {
 
     transporter.sendMail(
       {
-        from: "priyanshu.yadav@ksolves.com",
+        from: "KsolvesTagManager@gmail.com",
         to: req.body.data.email,
-        subject: "Verify Account",
+        subject: "KTM Reset Forgot Password ",
         html: message,
       },
       (err, res) => {
@@ -230,24 +220,30 @@ exports.resetPassword = async (req, res) => {
     // console.log("hello"+user)
 
     if (!user) {
-      return res.status(400).send("Token is invalid or has expired");
+      return res.status(410).json({message : "Token is invalid or has expired"});
     }
 
+    // Check if Last password is same as Current One
+    const validate = await bcrypt.compare(req.body.data.password,user.password)
+    if(validate){
+      return res.status(400).json({message:"This Password is same as last password"})
+    }
+
+    //Hash the new password
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(req.body.data.password, salt);
 
     user.password = hashedPass;
+
+    //Remove passwordResetToken 
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
-    // console.log("hello")
     await user.save();
-    // console.log(user)
-    res.status(200).json({
+    res.status(205).json({
       status: "success",user
     });
   } catch (error) {
-    console.log(error)
-    res.json(error);
+    res.status(500).json(error);
   }
 };
 

@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 
 
 const ForgotPassword = () => {
-    const [falt,setFalt] = useState()
+    const [falt,setFalt] = useState('')
   const {
     register,
     handleSubmit,
@@ -15,6 +15,7 @@ const ForgotPassword = () => {
   const onSubmit = async(data) =>{
     console.log(data.email)
     try {
+      setFalt('')
         const res = await axios.post("http://localhost:3000/api/forgot-password",{data})
         console.log(res.data)
         toast.success("Email Sent")
