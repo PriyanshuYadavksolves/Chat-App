@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const User = require("../model/User.js");
 const jwt = require("jsonwebtoken");
-const crypto = require('crypto')
+const crypto = require('crypto');
+const bcrypt = require('bcrypt')
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -13,8 +14,8 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.signup = async (req, res) => {
-  const { email,password } = req.body;
-  console.log(req.body)
+  const { email,password,username } = req.body.data;
+  console.log(email,password,username)
   // Check we have an email
   if (!email) {
     return res.status(422).json({ message: "Missing email." });
@@ -28,11 +29,20 @@ exports.signup = async (req, res) => {
       });
     }
     console.log("hello")
+
     // Step 1 - Create and save the user
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPass = await bcrypt.hash(password, salt);
+
+    // const che = await bcrypt.compare(password,hashedPass)
+    // console.log(che,"hello")
+
     const user = await new User({
       _id: new mongoose.Types.ObjectId(),
+      username:username,
       email: email,
-      password:password
+      password:hashedPass
     }).save();
 
     console.log(user)
@@ -41,7 +51,7 @@ exports.signup = async (req, res) => {
     const verificationToken = user.generateVerificationToken();
 
     // Step 3 - Email the user a unique verification link
-    const url = `http://localhost:3000/api/verify/${verificationToken}`;
+    const url = `http://localhost:5173/verify/${verificationToken}`;
     transporter.sendMail(
       {
         from: "priyanshu.yadav@ksolves.com",
@@ -57,7 +67,7 @@ exports.signup = async (req, res) => {
         }
       }
     );
-    return res.status(201).json({
+    return res.status(201).json({user,
       message: `Sent a verification email to ${email}`,
     });
   } catch (err) {
@@ -67,7 +77,8 @@ exports.signup = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { email } = req.body;
+  const { email,password } = req.body.data;
+  // console.log(email,password)
   // Check we have an email
   if (!email) {
     return res.status(422).json({
@@ -82,17 +93,31 @@ exports.login = async (req, res) => {
         message: "User does not exists",
       });
     }
-    // Step 2 - Ensure the account has been verified
+    // console.log(password,user.password)
+
+    // step 2 - Ensure Password is correct or not
+    const validate = await bcrypt.compare(password,user.password)
+    if (!validate) {
+      res.status(400).json({message : "wrong credentials!"});
+      return;
+    }
+
+    // Step 3 - Ensure the account has been verified
     if (!user.verified) {
       return res.status(403).json({
         message: "Verify your Account.",
       });
     }
+
     const verificationToken = jwt.sign(
       { ID: user._id },
       process.env.USER_VERIFICATION_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
+
+    // const payload = jwt.verify(verificationToken, process.env.USER_VERIFICATION_TOKEN_SECRET);
+    // console.log(payload)
+
     return res.status(200).json({
       message: "User logged in",
       verificationToken,
@@ -104,6 +129,7 @@ exports.login = async (req, res) => {
 
 exports.verify = async (req, res) => {
   const { token } = req.params;
+  // console.log(req.params)
   // Check we have an id
   if (!token) {
     return res.status(422).json({
@@ -117,7 +143,7 @@ exports.verify = async (req, res) => {
     // console.log(payload)
   } catch (err) {
     console.log("hello");
-    return res.status(500).json(err);
+    return res.status(500).json({message:"Token Not Valid"});
   }
   try {
     // Step 2 - Find user with matching ID
@@ -146,10 +172,10 @@ exports.verify = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   // find the user, if present in the database
   const user = await User.findOne({ 
-    email: req.body.email });
+    email: req.body.data.email });
 
   if (!user) {
-    return res.status(400).send("There is no user with that email");
+    return res.status(400).json({message : "This Email Not Exist, Enter Correct Email"});
   }
 //   console.log("hello" + user);
 
@@ -157,17 +183,17 @@ exports.forgotPassword = async (req, res) => {
   const resetToken = user.createPasswordResetToken();
   await user.save();
 //   console.log(user);
-  const resetUrl = `http://localhost:3000/api/reset-password/${resetToken}`;
+  const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
   try {
-    const message = `Forgot your password? Submit this link: ${resetUrl}.\n If you did not request this, please ignore this email and your password will remain unchanged.`;
+    const message = `Forgot your password? Click link: <a href = '${resetUrl}'>Here</a>\n If you did not request this, please ignore this email and your password will remain unchanged.`;
 
     transporter.sendMail(
       {
         from: "priyanshu.yadav@ksolves.com",
-        to: req.body.email,
+        to: req.body.data.email,
         subject: "Verify Account",
-        text: message,
+        html: message,
       },
       (err, res) => {
         if (err) {
@@ -220,3 +246,15 @@ exports.resetPassword = async (req, res) => {
     res.send(error);
   }
 };
+
+exports.delete = async (req,res) =>{
+  try {
+    const {id} = req.params
+    const data = await User.findByIdAndDelete(id)
+    console.log(data)
+    res.status(200).json("deleted")
+  } catch (error) {
+    console.log(error)
+    res.status(500).json(error)
+  }
+}

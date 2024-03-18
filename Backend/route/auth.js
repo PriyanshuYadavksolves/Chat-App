@@ -6,4 +6,5 @@ router.post('/login', UserController.login);
 router.get('/verify/:token', UserController.verify);
 router.post('/forgot-password', UserController.forgotPassword);
 router.patch('/reset-password/:token', UserController.resetPassword);
+router.delete('/delete/:id',UserController.delete)
 module.exports = router;

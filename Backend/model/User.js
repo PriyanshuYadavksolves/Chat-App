@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const UserSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
+    username:String,
     email: String,
     verified: {
         type: Boolean,
@@ -19,11 +20,12 @@ const UserSchema = mongoose.Schema({
       passwordResetToken: String,
       passwordResetExpires: Date,
 });
-UserSchema.pre('save', async function (next) {
-    // Hash the user password
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-  });
+// UserSchema.pre('save', async function (next) {
+//     // Hash the user password
+//     const salt = await bcrypt.genSalt(10);
+//     this.password = await bcrypt.hash(this.password, salt);
+//     next();
+//   });
 
 UserSchema.methods.generateVerificationToken = function () {
     const user = this;
