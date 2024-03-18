@@ -1,5 +1,5 @@
-import React from "react";
-import { Link,useLocation, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from 'axios'
 import {jwtDecode} from 'jwt-decode';
@@ -9,8 +9,8 @@ import { toast } from "react-toastify";
 const ResetPassword = () => {
   const params = useLocation()
   const token = params.pathname.split('/')[2]
-  console.log(token)
   const navigate = useNavigate()
+  const [falt,setFalt] = useState()
 
         const {
           register,
@@ -26,11 +26,13 @@ const ResetPassword = () => {
               })
               console.log(res.data)
 
-            //   toast.success("Email Sent Successfully")
+
+              toast.success("Password Reset Successfully")
               reset()
               navigate('/login')
             } catch (error) {
               console.log(error)
+              setFalt(error.response.data)
             }
           };
   return (
@@ -62,7 +64,8 @@ const ResetPassword = () => {
                 },
               })}
             />
-            {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
+            {errors.password && <p className="text-red-500 text-xs text-center">{errors.password.message}</p>}
+            {falt && <p className="text-red-500 text-md text-center">{falt}</p> }
 
 
             <input

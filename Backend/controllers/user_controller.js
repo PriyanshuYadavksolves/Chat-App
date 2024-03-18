@@ -233,17 +233,21 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).send("Token is invalid or has expired");
     }
 
-    user.password = req.body.password;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPass = await bcrypt.hash(req.body.data.password, salt);
+
+    user.password = hashedPass;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    // console.log("hello")
     await user.save();
     // console.log(user)
     res.status(200).json({
-      status: "success",
+      status: "success",user
     });
   } catch (error) {
     console.log(error)
-    res.send(error);
+    res.json(error);
   }
 };
 
